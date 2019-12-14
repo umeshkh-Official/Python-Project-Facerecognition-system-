@@ -1,0 +1,555 @@
+import sys
+from subprocess import call
+import cv2
+import mysql.connector
+from tkinter import *
+from tkinter import messagebox
+try:
+    import Tkinter as tk
+except ImportError:
+    import tkinter as tk
+
+try:
+    import ttk
+    py3 = False
+except ImportError:
+    import tkinter.ttk as ttk
+    py3 = True
+
+import seconddd_support
+con = mysql.connector.connect(
+    host="127.0.0.1",
+    user="root",
+    passwd="tiger",
+    database="employee"
+)
+cursor = con.cursor()
+#----------------------------------------------------------------------------------------------------------#
+
+
+def vp_start_gui():
+    '''Starting point when module is the main routine.'''
+    global val, w, root
+    root = tk.Tk()
+    seconddd_support.set_Tk_var()
+    top = Toplevel1 (root)
+    seconddd_support.init(root, top)
+    root.mainloop()
+
+w = None
+def create_Toplevel1(root, *args, **kwargs):
+    '''Starting point when module is imported by another program.'''
+    global w, w_win, rt
+    rt = root
+    w = tk.Toplevel (root)
+    seconddd_support.set_Tk_var()
+    top = Toplevel1 (w)
+    seconddd_support.init(w, top, *args, **kwargs)
+    return (w, top)
+
+def destroy_Toplevel1():
+    global w
+    w.destroy()
+    w = None
+#--------------------------------------------------------------------------------------------------#
+class Toplevel1:
+    def addfacebtn_click(self):
+        cam = cv2.VideoCapture(0)
+        detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+        Id = self.idobx.get()
+        sampleNum = 0
+        while (True):
+            ret, img = cam.read()
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            faces = detector.detectMultiScale(gray, 1.3, 5)
+            for (x, y, w, h) in faces:
+                cv2.rectangle(img, (x + 2, y + 2), (x + w + 2, y + h + 2), (255, 0, 0), 2)
+
+                sampleNum = sampleNum + 1
+
+                cv2.imwrite("dataSet/User." + str(Id) + '.' + str(sampleNum) + ".jpg", gray[y:y + h, x:x + w])
+
+                cv2.imshow('frame', img)
+
+            if cv2.waitKey(300) & 0xFF == ord('q'):
+                break
+            elif sampleNum > 200:
+                break
+        cam.release()
+        cv2.destroyAllWindows()
+    def combo_input(self):
+        conn = mysql.connector.connect(host="127.0.0.1", user="root", passwd="tiger", database="employee")
+        cursor = conn.cursor()
+        cursor.execute("select depid from department");
+        result = []
+        for row in cursor.fetchall():
+            result.append(row[0])
+        return result
+        conn.close()
+    def depshowbtn_click(self):
+        conn = mysql.connector.connect(host="127.0.0.1",user="root",passwd="tiger",database="employee")
+        cursor=conn.cursor()
+        cursor.execute("select *from department");
+        self.Listbox2.delete(0, self.Listbox2.size())
+        for i in cursor:
+            self.Listbox2.insert(END, i)
+    def depaddbtn_click(self):
+        n=self.DepBox2.get()
+        id=self.Depidbox.get()
+        cursor.execute("INSERT INTO department(depid,name) VALUES('"+id+"','"+n+"')")
+        messagebox.showinfo("Message","New Department added");
+        self.depshowbtn_click()
+        con.commit()
+    def showbtn1_click(self):
+        conn = mysql.connector.connect(host="127.0.0.1", user="root", passwd="tiger", database="employee")
+        cursor = conn.cursor()
+        cursor.execute("select *from emp where id > 1")
+        self.ListBox1.delete(0, self.ListBox1.size())
+        for i in cursor:
+            self.ListBox1.insert(END, i)
+
+    def Addbtn_click(self):
+        conn = mysql.connector.connect(host="127.0.0.1", user="root", passwd="tiger", database="employee")
+        cursor = conn.cursor()
+        id = self.idobx.get()
+        name = self.NameBox.get()
+        email = self.EmailBox.get()
+        gender = self.GCbox.get()
+        phno = self.phBox.get()
+         #dob = self.Dob.get()
+        address = self.addrBox.get('1.0', END)
+        did = self.DepCbox.get()
+        q = "INSERT INTO emp(id,name,email,gender,phno,address,dep_id) VALUES('" + id + "','" + name + "','" + email + "','" + gender + "','" + phno + "','" + address + "','"+ did +"')"
+        cursor.execute(q)
+        messagebox.showinfo('Message', "New Employee Added")
+        self.showbtn1_click()
+        conn.commit()
+        conn.close()
+    def Delbtn_click(self):
+        conn = mysql.connector.connect(host="127.0.0.1", user="root", passwd="tiger", database="employee")
+        cursor = conn.cursor()
+        email = self.EmailBox.get()
+        cursor.execute("DELETE FROM emp WHERE email='" + email + "'")
+        conn.commit()
+        conn.close()
+        messagebox.showinfo("Message", "EMployee Removed")
+        self.ListBox1.delete(0, self.ListBox1.size())
+    def Depdelbtn_click(self):
+        conn = mysql.connector.connect(host="127.0.0.1", user="root", passwd="tiger", database="employee")
+        cursor = conn.cursor()
+        id = self.Depidbox.get()
+        cursor.execute("DELETE FROM department WHERE depid='" + id + "'")
+        conn.commit()
+        conn.close()
+    def show2btn_click(self):
+        conn = mysql.connector.connect(host="127.0.0.1", user="root", passwd="tiger", database="employee")
+        cursor = conn.cursor()
+        cmd1 = "CALL new_emps_added()"
+        cursor.execute(cmd1)
+        # cmd2="SELECT *FROM emp WHERE name LIKE '"+self.Searchbox.get()+"'"
+        # cursor.execute(cmd2)
+        for i in cursor:
+            self.ListBox1.insert(END, i)
+        conn.close()
+#--------------------------------------------------------------------------------------------------#
+    def __init__(self, top=None):
+        _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
+        _fgcolor = '#000000'  # X11 color: 'black'
+        _compcolor = '#d9d9d9' # X11 color: 'gray85'
+        _ana1color = '#d9d9d9' # X11 color: 'gray85'
+        _ana2color = '#ececec' # Closest X11 color: 'gray92'
+        font11 = "-family {Segoe UI} -size 14 -weight normal -slant "  \
+            "roman -underline 0 -overstrike 0"
+        font12 = "-family {Segoe UI} -size 16 -weight bold -slant "  \
+            "roman -underline 0 -overstrike 0"
+        font13 = "-family {Segoe UI} -size 14 -weight bold -slant "  \
+            "roman -underline 0 -overstrike 0"
+        self.style = ttk.Style()
+        if sys.platform == "win32":
+            self.style.theme_use('winnative')
+        self.style.configure('.',background=_bgcolor)
+        self.style.configure('.',foreground=_fgcolor)
+        self.style.configure('.',font="TkDefaultFont")
+        self.style.map('.',background=
+            [('selected', _compcolor), ('active',_ana2color)])
+
+        top.geometry("1252x798+297+123")
+        top.minsize(148, 1)
+        top.maxsize(1924, 1055)
+        top.resizable(1, 1)
+        top.title("New Toplevel")
+        top.configure(background="#001240")
+
+        self.Frame1 = tk.Frame(top)
+        self.Frame1.place(relx=0.016, rely=0.088, relheight=0.683
+                , relwidth=0.363)
+        self.Frame1.configure(relief='groove')
+        self.Frame1.configure(borderwidth="2")
+        self.Frame1.configure(relief="groove")
+        self.Frame1.configure(background="#30b9d1")
+
+        self.Label4 = tk.Label(self.Frame1)
+        self.Label4.place(relx=0.308, rely=0.037, height=37, width=196)
+        self.Label4.configure(background="#d9d9d9")
+        self.Label4.configure(disabledforeground="#a3a3a3")
+        self.Label4.configure(font=font11)
+        self.Label4.configure(foreground="#000000")
+        self.Label4.configure(state='active')
+        self.Label4.configure(text='''Manage Employee''')
+
+        self.deplbl = tk.Label(self.Frame1)
+        self.deplbl.place(relx=0.066, rely=0.165, height=26, width=93)
+        self.deplbl.configure(background="#d9d9d9")
+        self.deplbl.configure(disabledforeground="#a3a3a3")
+        self.deplbl.configure(foreground="#000000")
+        self.deplbl.configure(text='''Department :''')
+
+        self.idlbl = tk.Label(self.Frame1)
+        self.idlbl.place(relx=0.066, rely=0.275, height=26, width=96)
+        self.idlbl.configure(background="#d9d9d9")
+        self.idlbl.configure(disabledforeground="#a3a3a3")
+        self.idlbl.configure(foreground="#000000")
+        self.idlbl.configure(text='''Employee id :''')
+
+        self.namelbl = tk.Label(self.Frame1)
+        self.namelbl.place(relx=0.088, rely=0.367, height=26, width=42)
+        self.namelbl.configure(activebackground="#f9f9f9")
+        self.namelbl.configure(activeforeground="black")
+        self.namelbl.configure(background="#d9d9d9")
+        self.namelbl.configure(disabledforeground="#a3a3a3")
+        self.namelbl.configure(foreground="#000000")
+        self.namelbl.configure(highlightbackground="#d9d9d9")
+        self.namelbl.configure(highlightcolor="black")
+        self.namelbl.configure(text='''Name :''')
+
+        self.emaillbl = tk.Label(self.Frame1)
+        self.emaillbl.place(relx=0.088, rely=0.459, height=26, width=50)
+        self.emaillbl.configure(background="#d9d9d9")
+        self.emaillbl.configure(disabledforeground="#a3a3a3")
+        self.emaillbl.configure(foreground="#000000")
+        self.emaillbl.configure(text='''Email :''')
+
+        self.glbl = tk.Label(self.Frame1)
+        self.glbl.place(relx=0.066, rely=0.587, height=26, width=61)
+        self.glbl.configure(background="#d9d9d9")
+        self.glbl.configure(disabledforeground="#a3a3a3")
+        self.glbl.configure(foreground="#000000")
+        self.glbl.configure(text='''Gender :''')
+
+        self.phnolbl = tk.Label(self.Frame1)
+        self.phnolbl.place(relx=0.066, rely=0.716, height=26, width=88)
+        self.phnolbl.configure(background="#d9d9d9")
+        self.phnolbl.configure(disabledforeground="#a3a3a3")
+        self.phnolbl.configure(foreground="#000000")
+        self.phnolbl.configure(text='''Contact No :''')
+
+        self.addrlbl = tk.Label(self.Frame1)
+        self.addrlbl.place(relx=0.088, rely=0.844, height=26, width=66)
+        self.addrlbl.configure(background="#d9d9d9")
+        self.addrlbl.configure(disabledforeground="#a3a3a3")
+        self.addrlbl.configure(foreground="#000000")
+        self.addrlbl.configure(text='''Address :''')
+
+        self.DepCbox = ttk.Combobox(self.Frame1)
+        self.DepCbox.place(relx=0.484, rely=0.165, relheight=0.048, relwidth=0.411)
+        self.DepCbox.configure(textvariable=seconddd_support.combobox)
+        self.DepCbox.configure(takefocus="")
+        self.DepCbox['value']=self.combo_input()
+
+        self.idobx = tk.Entry(self.Frame1)
+        self.idobx.place(relx=0.484, rely=0.275,height=24, relwidth=0.404)
+        self.idobx.configure(background="white")
+        self.idobx.configure(disabledforeground="#a3a3a3")
+        self.idobx.configure(font="-family {Courier New} -size 10")
+        self.idobx.configure(foreground="#000000")
+        self.idobx.configure(insertbackground="black")
+
+        self.NameBox = tk.Entry(self.Frame1)
+        self.NameBox.place(relx=0.484, rely=0.367,height=24, relwidth=0.448)
+        self.NameBox.configure(background="white")
+        self.NameBox.configure(disabledforeground="#a3a3a3")
+        self.NameBox.configure(font="-family {Courier New} -size 10")
+        self.NameBox.configure(foreground="#000000")
+        self.NameBox.configure(insertbackground="black")
+
+        self.EmailBox = tk.Entry(self.Frame1)
+        self.EmailBox.place(relx=0.484, rely=0.477,height=24, relwidth=0.448)
+        self.EmailBox.configure(background="white")
+        self.EmailBox.configure(disabledforeground="#a3a3a3")
+        self.EmailBox.configure(font="-family {Courier New} -size 10")
+        self.EmailBox.configure(foreground="#000000")
+        self.EmailBox.configure(insertbackground="black")
+
+        self.phBox = tk.Entry(self.Frame1)
+        self.phBox.place(relx=0.484, rely=0.716,height=24, relwidth=0.448)
+        self.phBox.configure(background="white")
+        self.phBox.configure(disabledforeground="#a3a3a3")
+        self.phBox.configure(font="-family {Courier New} -size 10")
+        self.phBox.configure(foreground="#000000")
+        self.phBox.configure(insertbackground="black")
+
+        self.addrBox = tk.Text(self.Frame1)
+        self.addrBox.place(relx=0.484, rely=0.844, relheight=0.117
+                , relwidth=0.448)
+        self.addrBox.configure(background="white")
+        self.addrBox.configure(font="-family {Segoe UI} -size 9")
+        self.addrBox.configure(foreground="black")
+        self.addrBox.configure(highlightbackground="#d9d9d9")
+        self.addrBox.configure(highlightcolor="black")
+        self.addrBox.configure(insertbackground="black")
+        self.addrBox.configure(selectbackground="#c4c4c4")
+        self.addrBox.configure(selectforeground="black")
+        self.addrBox.configure(wrap="word")
+
+        self.GCbox = ttk.Combobox(self.Frame1)
+        self.GCbox.place(relx=0.484, rely=0.587, relheight=0.048, relwidth=0.411)
+
+        self.GCbox.configure(textvariable=tk.StringVar())
+        self.GCbox.configure(takefocus="")
+        self.GCbox['values']=('Male','Female','Others')
+        self.Frame2 = tk.Frame(top)
+        self.Frame2.place(relx=0.415, rely=0.088, relheight=0.47, relwidth=0.547)
+
+        self.Frame2.configure(relief='groove')
+        self.Frame2.configure(borderwidth="2")
+        self.Frame2.configure(relief="groove")
+        self.Frame2.configure(background="#f053dd")
+
+        self.ListBox1 = tk.Listbox(self.Frame2)
+        self.ListBox1.place(relx=0.029, rely=0.133, relheight=0.821
+                , relwidth=0.955)
+        self.ListBox1.configure(background="white")
+        self.ListBox1.configure(disabledforeground="#a3a3a3")
+        self.ListBox1.configure(font="-family {Courier New} -size 10")
+        self.ListBox1.configure(foreground="#000000")
+
+        self.searchCbox = ttk.Combobox(self.Frame2)
+        self.searchCbox.place(relx=0.204, rely=0.027, relheight=0.069, relwidth=0.2)
+        self.searchCbox.configure(textvariable=tk.StringVar())
+        self.searchCbox.configure(takefocus="")
+        self.searchCbox['value']=('Employeee ID','Name')
+
+        self.searchbox = tk.Entry(self.Frame2)
+        self.searchbox.place(relx=0.423, rely=0.027,height=24, relwidth=0.225)
+        self.searchbox.configure(background="white")
+        self.searchbox.configure(disabledforeground="#a3a3a3")
+        self.searchbox.configure(font="-family {Courier New} -size 10")
+        self.searchbox.configure(foreground="#000000")
+        self.searchbox.configure(insertbackground="black")
+
+        self.search = tk.Button(self.Frame2)
+        self.search.place(relx=0.686, rely=0.027, height=33, width=96)
+        self.search.configure(activebackground="#ececec")
+        self.search.configure(activeforeground="#000000")
+        self.search.configure(background="#d9d9d9")
+        self.search.configure(disabledforeground="#a3a3a3")
+        self.search.configure(foreground="#000000")
+        self.search.configure(highlightbackground="#d9d9d9")
+        self.search.configure(highlightcolor="black")
+        self.search.configure(pady="0")
+        self.search.configure(text='''search''')
+
+        self.showbtn2 = tk.Button(self.Frame2)
+        self.showbtn2.place(relx=0.847, rely=0.027, height=33, width=86)
+        self.showbtn2.configure(activebackground="#ececec")
+        self.showbtn2.configure(activeforeground="#000000")
+        self.showbtn2.configure(background="#d9d9d9")
+        self.showbtn2.configure(disabledforeground="#a3a3a3")
+        self.showbtn2.configure(foreground="#000000")
+        self.showbtn2.configure(highlightbackground="#d9d9d9")
+        self.showbtn2.configure(highlightcolor="black")
+        self.showbtn2.configure(pady="0")
+        self.showbtn2.configure(command=self.show2btn_click,text='''Show ALL''')
+
+        self.Searchlbl = tk.Label(self.Frame2)
+        self.Searchlbl.place(relx=0.044, rely=0.027, height=26, width=82)
+        self.Searchlbl.configure(background="#d9d9d9")
+        self.Searchlbl.configure(disabledforeground="#a3a3a3")
+        self.Searchlbl.configure(foreground="#000000")
+        self.Searchlbl.configure(text='''Search by''')
+
+        self.Frame3 = tk.Frame(top)
+        self.Frame3.place(relx=0.415, rely=0.589, relheight=0.382, relwidth=0.547)
+        self.Frame3.configure(relief='groove')
+        self.Frame3.configure(borderwidth="2")
+        self.Frame3.configure(relief="groove")
+        self.Frame3.configure(background="#0a6365")
+
+        self.Frame4 = tk.Frame(self.Frame3)
+        self.Frame4.place(relx=0.044, rely=0.689, relheight=0.246, relwidth=0.504)
+        self.Frame4.configure(relief='groove')
+        self.Frame4.configure(borderwidth="2")
+        self.Frame4.configure(relief="groove")
+        self.Frame4.configure(background="#936798")
+
+        self.depaddbtn = tk.Button(self.Frame4)
+        self.depaddbtn.place(relx=0.087, rely=0.267, height=33, width=96)
+        self.depaddbtn.configure(activebackground="#ececec")
+        self.depaddbtn.configure(activeforeground="#000000")
+        self.depaddbtn.configure(background="#d9d9d9")
+        self.depaddbtn.configure(disabledforeground="#a3a3a3")
+        self.depaddbtn.configure(foreground="#000000")
+        self.depaddbtn.configure(highlightbackground="#d9d9d9")
+        self.depaddbtn.configure(highlightcolor="black")
+        self.depaddbtn.configure(pady="0")
+        self.depaddbtn.configure(command=self.depaddbtn_click,text='''Add''')
+
+        self.Depdelbtn = tk.Button(self.Frame4)
+        self.Depdelbtn.place(relx=0.435, rely=0.267, height=33, width=86)
+        self.Depdelbtn.configure(activebackground="#ececec")
+        self.Depdelbtn.configure(activeforeground="#000000")
+        self.Depdelbtn.configure(background="#d9d9d9")
+        self.Depdelbtn.configure(disabledforeground="#a3a3a3")
+        self.Depdelbtn.configure(foreground="#000000")
+        self.Depdelbtn.configure(highlightbackground="#d9d9d9")
+        self.Depdelbtn.configure(highlightcolor="black")
+        self.Depdelbtn.configure(pady="0")
+        self.Depdelbtn.configure(command=self.Depdelbtn_click,text='''Delete''')
+
+        self.depshow = tk.Button(self.Frame4)
+        self.depshow.place(relx=0.725, rely=0.267, height=33, width=76)
+        self.depshow.configure(activebackground="#ececec")
+        self.depshow.configure(activeforeground="#000000")
+        self.depshow.configure(background="#d9d9d9")
+        self.depshow.configure(disabledforeground="#a3a3a3")
+        self.depshow.configure(foreground="#000000")
+        self.depshow.configure(highlightbackground="#d9d9d9")
+        self.depshow.configure(highlightcolor="black")
+        self.depshow.configure(pady="0")
+        self.depshow.configure(text='''Show All''')
+        self.depshow.configure(command=self.depshowbtn_click)
+
+        self.Listbox2 = tk.Listbox(self.Frame3)
+        self.Listbox2.place(relx=0.584, rely=0.033, relheight=0.911, relwidth=0.4)
+        self.Listbox2.configure(background="white")
+        self.Listbox2.configure(disabledforeground="#a3a3a3")
+        self.Listbox2.configure(font="-family {Courier New} -size 10")
+        self.Listbox2.configure(foreground="#000000")
+
+        self.Deplbl = tk.Label(self.Frame3)
+        self.Deplbl.place(relx=0.015, rely=0.033, height=36, width=312)
+        self.Deplbl.configure(background="#d9d9d9")
+        self.Deplbl.configure(disabledforeground="#a3a3a3")
+        self.Deplbl.configure(font=font13)
+        self.Deplbl.configure(foreground="#000000")
+        self.Deplbl.configure(state='active')
+        self.Deplbl.configure(text='''Department Management''')
+
+
+        self.Depidbox = tk.Entry(self.Frame3)
+        self.Depidbox.place(relx=0.263, rely=0.262, height=24, relwidth=0.269)
+        self.Depidbox.configure(background="white")
+        self.Depidbox.configure(disabledforeground="#a3a3a3")
+        self.Depidbox.configure(font="-family {Courier New} -size 10")
+        self.Depidbox.configure(foreground="#000000")
+        self.Depidbox.configure(highlightbackground="#d9d9d9")
+        self.Depidbox.configure(highlightcolor="black")
+        self.Depidbox.configure(insertbackground="black")
+        self.Depidbox.configure(selectbackground="#c4c4c4")
+        self.Depidbox.configure(selectforeground="black")
+
+        self.DepBox2 = tk.Entry(self.Frame3)
+        self.DepBox2.place(relx=0.263, rely=0.492,height=24, relwidth=0.269)
+        self.DepBox2.configure(background="white")
+        self.DepBox2.configure(disabledforeground="#a3a3a3")
+        self.DepBox2.configure(font="-family {Courier New} -size 10")
+        self.DepBox2.configure(foreground="#000000")
+        self.DepBox2.configure(insertbackground="black")
+
+        self.dep2lbl = tk.Label(self.Frame3)
+        self.dep2lbl.place(relx=0.029, rely=0.492, height=26, width=142)
+        self.dep2lbl.configure(background="#d9d9d9")
+        self.dep2lbl.configure(disabledforeground="#a3a3a3")
+        self.dep2lbl.configure(foreground="#000000")
+        self.dep2lbl.configure(text='''Department Name :''')
+
+        self.depid = tk.Label(self.Frame3)
+        self.depid.place(relx=0.044, rely=0.262, height=26, width=122)
+        self.depid.configure(background="#d9d9d9")
+        self.depid.configure(disabledforeground="#a3a3a3")
+        self.depid.configure(foreground="#000000")
+        self.depid.configure(text='''ID''')
+
+        self.Frame5 = tk.Frame(top)
+        self.Frame5.place(relx=0.016, rely=0.789, relheight=0.182, relwidth=0.363)
+        self.Frame5.configure(relief='groove')
+        self.Frame5.configure(borderwidth="2")
+        self.Frame5.configure(relief="groove")
+        self.Frame5.configure(background="#b96046")
+
+        self.Addbtn = tk.Button(self.Frame5)
+        self.Addbtn.place(relx=0.066, rely=0.138, height=33, width=106)
+        self.Addbtn.configure(activebackground="#ececec")
+        self.Addbtn.configure(activeforeground="#000000")
+        self.Addbtn.configure(background="#d9d9d9")
+        self.Addbtn.configure(disabledforeground="#a3a3a3")
+        self.Addbtn.configure(foreground="#000000")
+        self.Addbtn.configure(highlightbackground="#d9d9d9")
+        self.Addbtn.configure(highlightcolor="black")
+        self.Addbtn.configure(pady="0")
+        self.Addbtn.configure(command=self.Addbtn_click,text='''Add''')
+
+        self.Delbtn = tk.Button(self.Frame5)
+        self.Delbtn.place(relx=0.374, rely=0.138, height=33, width=106)
+        self.Delbtn.configure(activebackground="#ececec")
+        self.Delbtn.configure(activeforeground="#000000")
+        self.Delbtn.configure(background="#d9d9d9")
+        self.Delbtn.configure(disabledforeground="#a3a3a3")
+        self.Delbtn.configure(foreground="#000000")
+        self.Delbtn.configure(highlightbackground="#d9d9d9")
+        self.Delbtn.configure(highlightcolor="black")
+        self.Delbtn.configure(pady="0")
+        self.Delbtn.configure(command=self.Delbtn_click,text='''Delete''')
+
+        self.clrbtn = tk.Button(self.Frame5)
+        self.clrbtn.place(relx=0.132, rely=0.621, height=33, width=126)
+        self.clrbtn.configure(activebackground="#ececec")
+        self.clrbtn.configure(activeforeground="#000000")
+        self.clrbtn.configure(background="#d9d9d9")
+        self.clrbtn.configure(disabledforeground="#a3a3a3")
+        self.clrbtn.configure(foreground="#000000")
+        self.clrbtn.configure(highlightbackground="#d9d9d9")
+        self.clrbtn.configure(highlightcolor="black")
+        self.clrbtn.configure(pady="0")
+        self.clrbtn.configure(text='''Clear''')
+
+        self.addfacebtn = tk.Button(self.Frame5)
+        self.addfacebtn.place(relx=0.484, rely=0.621, height=33, width=126)
+        self.addfacebtn.configure(activebackground="#ececec")
+        self.addfacebtn.configure(activeforeground="#000000")
+        self.addfacebtn.configure(background="#d9d9d9")
+        self.addfacebtn.configure(disabledforeground="#a3a3a3")
+        self.addfacebtn.configure(foreground="#000000")
+        self.addfacebtn.configure(highlightbackground="#d9d9d9")
+        self.addfacebtn.configure(highlightcolor="black")
+        self.addfacebtn.configure(pady="0")
+        self.addfacebtn.configure(command=self.addfacebtn_click,text='''Add Face''')
+
+        self.showbtn1 = tk.Button(self.Frame5)
+        self.showbtn1.place(relx=0.681, rely=0.138, height=33, width=86)
+        self.showbtn1.configure(activebackground="#ececec")
+        self.showbtn1.configure(activeforeground="#000000")
+        self.showbtn1.configure(background="#d9d9d9")
+        self.showbtn1.configure(disabledforeground="#a3a3a3")
+        self.showbtn1.configure(foreground="#000000")
+        self.showbtn1.configure(highlightbackground="#d9d9d9")
+        self.showbtn1.configure(highlightcolor="black")
+        self.showbtn1.configure(pady="0")
+        self.showbtn1.configure(command=self.showbtn1_click,text='''Show All''')
+
+        self.Label11 = tk.Label(top)
+        self.Label11.place(relx=-0.008, rely=0.013, height=46, width=1262)
+        self.Label11.configure(background="#d9d9d9")
+        self.Label11.configure(disabledforeground="#a3a3a3")
+        self.Label11.configure(font=font12)
+        self.Label11.configure(foreground="#000000")
+        self.Label11.configure(state='active')
+        self.Label11.configure(text='''Employee Management System''')
+
+if __name__ == '__main__':
+    vp_start_gui()
+
+
+
+
+
